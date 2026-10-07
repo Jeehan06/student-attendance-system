@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,6 +11,9 @@ export default function StudentDashboard() {
   const [attendance, setAttendance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(null);
+  const [issueAttendanceId, setIssueAttendanceId] = useState(null);
+  const [issueMessage, setIssueMessage] = useState("");
+  const [submittingIssue, setSubmittingIssue] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -96,6 +100,50 @@ export default function StudentDashboard() {
       setError(error.message);
     } finally {
       setSubmitting(null);
+    }
+  };
+
+  const submitIssue = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!issueMessage.trim()) {
+      setError("Please enter a message for the attendance issue.");
+      return;
+    }
+
+    setSubmittingIssue(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/student/attendance/issues`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            attendanceId: issueAttendanceId,
+            message: issueMessage.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit attendance issue");
+      }
+
+      setMessage("Attendance issue reported successfully.");
+      setIssueAttendanceId(null);
+      setIssueMessage("");
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setSubmittingIssue(false);
     }
   };
 
@@ -189,6 +237,102 @@ export default function StudentDashboard() {
           </section>
         )}
 
+        {attendance?.attendance?.length > 0 && (
+          <section className="mb-8">
+            <h2 className="mb-4 text-xl font-semibold">
+              Official Attendance
+            </h2>
+
+            <div className="space-y-4">
+              {attendance.attendance.map((record) => (
+                <div
+                  key={record.id}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900 p-5"
+                >
+                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                    <div>
+                      <h3 className="font-semibold">
+                        {record.class?.subject?.name ||
+                          record.subject?.name ||
+                          "Class"}
+                      </h3>
+
+                      {record.class?.date && (
+                        <p className="mt-1 text-sm text-zinc-400">
+                          {record.class.date}
+                        </p>
+                      )}
+
+                      <span
+                        className={`mt-2 inline-block rounded-full px-3 py-1 text-sm font-medium ${
+                          record.status === "PRESENT"
+                            ? "bg-green-950 text-green-400"
+                            : "bg-red-950 text-red-400"
+                        }`}
+                      >
+                        {record.status}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setIssueAttendanceId(record.id);
+                        setIssueMessage("");
+                        setError("");
+                        setMessage("");
+                      }}
+                      className="rounded-lg border border-yellow-700 px-4 py-2 text-sm font-medium text-yellow-400 hover:bg-yellow-950"
+                    >
+                      Report Issue
+                    </button>
+                  </div>
+
+                  {issueAttendanceId === record.id && (
+                    <div className="mt-5 border-t border-zinc-800 pt-5">
+                      <label className="mb-2 block text-sm font-medium text-zinc-300">
+                        Explain the attendance issue
+                      </label>
+
+                      <textarea
+                        value={issueMessage}
+                        onChange={(event) =>
+                          setIssueMessage(event.target.value)
+                        }
+                        placeholder="Example: I was present in this class, but my attendance was marked absent."
+                        rows={4}
+                        className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-yellow-600"
+                      />
+
+                      <div className="mt-3 flex gap-3">
+                        <button
+                          onClick={submitIssue}
+                          disabled={submittingIssue}
+                          className="rounded-lg bg-yellow-600 px-4 py-2 text-sm font-semibold text-white hover:bg-yellow-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {submittingIssue
+                            ? "Submitting..."
+                            : "Submit Issue"}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setIssueAttendanceId(null);
+                            setIssueMessage("");
+                          }}
+                          disabled={submittingIssue}
+                          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section>
           <h2 className="mb-4 text-xl font-semibold">
             Assigned Classes
@@ -223,7 +367,8 @@ export default function StudentDashboard() {
                         </p>
 
                         <p className="text-sm text-zinc-400">
-                          {classSession.startTime} - {classSession.endTime}
+                          {classSession.startTime} -{" "}
+                          {classSession.endTime}
                         </p>
                       </div>
 
