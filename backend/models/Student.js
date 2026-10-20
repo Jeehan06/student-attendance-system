@@ -16,6 +16,10 @@ const Student = sequelize.define("Student", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  department: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+  },
   semester: {
     type: DataTypes.INTEGER,
     allowNull: false,

@@ -15,15 +15,31 @@ const User = sequelize.define("User", {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
+    validate: {
+      isEmail: true,
+    },
   },
   password: {
     type: DataTypes.STRING,
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM("STUDENT", "ADMIN"),
+    type: DataTypes.ENUM("STUDENT", "ADMIN", "TEACHER"),
     allowNull: false,
     defaultValue: "STUDENT",
+  },
+  approvalStatus: {
+    type: DataTypes.ENUM("PENDING", "APPROVED", "REJECTED"),
+    allowNull: false,
+    defaultValue: "APPROVED",
+  },
+  approvedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  approvedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
 });
 

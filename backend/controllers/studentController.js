@@ -10,15 +10,20 @@ const {
 const getClasses = async (req, res) => {
   try {
     const student = await Student.findOne({
-      where: {
-        userId: req.user.id,
-      },
+      where: { userId: req.user.id },
     });
 
     if (!student) {
-      return res.status(404).json({
-        message: "Student profile not found",
-      });
+      return res.status(404).json({ message: "Student profile not found" });
+    }
+
+    const subjectFilter = {
+      course: student.course,
+      semester: student.semester,
+    };
+
+    if (student.department) {
+      subjectFilter.department = student.department;
     }
 
     const classes = await ClassSession.findAll({
@@ -26,17 +31,12 @@ const getClasses = async (req, res) => {
         {
           model: Subject,
           as: "subject",
-          where: {
-            course: student.course,
-            semester: student.semester,
-          },
+          where: subjectFilter,
         },
         {
           model: AttendanceSubmission,
           as: "submissions",
-          where: {
-            studentId: student.id,
-          },
+          where: { studentId: student.id },
           required: false,
         },
       ],
@@ -46,64 +46,52 @@ const getClasses = async (req, res) => {
       ],
     });
 
-    return res.status(200).json({
-      classes,
-    });
+    return res.status(200).json({ classes });
   } catch (error) {
     console.error("Get student classes error:", error);
-
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 const submitAttendance = async (req, res) => {
   try {
     const { classId, status } = req.body;
+    const parsedClassId = Number(classId);
 
-    if (!classId || !status) {
+    if (
+      !Number.isInteger(parsedClassId) ||
+      parsedClassId <= 0 ||
+      !["PRESENT", "ABSENT"].includes(status)
+    ) {
       return res.status(400).json({
-        message: "Class ID and status are required",
-      });
-    }
-
-    if (!["PRESENT", "ABSENT"].includes(status)) {
-      return res.status(400).json({
-        message: "Status must be PRESENT or ABSENT",
+        message: "A valid class ID and status (PRESENT or ABSENT) are required",
       });
     }
 
     const student = await Student.findOne({
-      where: {
-        userId: req.user.id,
-      },
+      where: { userId: req.user.id },
     });
 
     if (!student) {
-      return res.status(404).json({
-        message: "Student profile not found",
-      });
+      return res.status(404).json({ message: "Student profile not found" });
     }
 
-    const classSession = await ClassSession.findByPk(classId, {
-      include: [
-        {
-          model: Subject,
-          as: "subject",
-        },
-      ],
+    const classSession = await ClassSession.findByPk(parsedClassId, {
+      include: [{ model: Subject, as: "subject" }],
     });
 
-    if (!classSession) {
-      return res.status(404).json({
-        message: "Class session not found",
-      });
+    if (!classSession || !classSession.subject) {
+      return res.status(404).json({ message: "Class session not found" });
     }
 
+    const subject = classSession.subject;
+
     if (
-      classSession.subject.course !== student.course ||
-      classSession.subject.semester !== student.semester
+      subject.course !== student.course ||
+      Number(subject.semester) !== Number(student.semester) ||
+      (student.department &&
+        subject.department !== undefined &&
+        subject.department !== student.department)
     ) {
       return res.status(403).json({
         message: "This class is not assigned to you",
@@ -113,7 +101,7 @@ const submitAttendance = async (req, res) => {
     const existingSubmission = await AttendanceSubmission.findOne({
       where: {
         studentId: student.id,
-        classId,
+        classId: parsedClassId,
       },
     });
 
@@ -126,7 +114,7 @@ const submitAttendance = async (req, res) => {
 
     const submission = await AttendanceSubmission.create({
       studentId: student.id,
-      classId,
+      classId: parsedClassId,
       status,
     });
 
@@ -135,50 +123,39 @@ const submitAttendance = async (req, res) => {
       submission,
     });
   } catch (error) {
-    console.error("Submit attendance error:", error);
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        message: "Attendance already submitted for this class",
+      });
+    }
 
-    return res.status(500).json({
-      message: "Server error",
-    });
+    console.error("Submit attendance error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 const getAttendance = async (req, res) => {
   try {
     const student = await Student.findOne({
-      where: {
-        userId: req.user.id,
-      },
+      where: { userId: req.user.id },
     });
 
     if (!student) {
-      return res.status(404).json({
-        message: "Student profile not found",
-      });
+      return res.status(404).json({ message: "Student profile not found" });
     }
 
     const attendance = await Attendance.findAll({
-      where: {
-        studentId: student.id,
-      },
+      where: { studentId: student.id },
       include: [
         {
           model: ClassSession,
           as: "class",
-          include: [
-            {
-              model: Subject,
-              as: "subject",
-            },
-          ],
+          include: [{ model: Subject, as: "subject" }],
         },
       ],
       order: [
         [
-          {
-            model: ClassSession,
-            as: "class",
-          },
+          { model: ClassSession, as: "class" },
           "date",
           "DESC",
         ],
@@ -186,11 +163,9 @@ const getAttendance = async (req, res) => {
     });
 
     const totalClasses = attendance.length;
-
     const presentClasses = attendance.filter(
       (record) => record.status === "PRESENT"
     ).length;
-
     const absentClasses = attendance.filter(
       (record) => record.status === "ABSENT"
     ).length;
@@ -211,46 +186,43 @@ const getAttendance = async (req, res) => {
     });
   } catch (error) {
     console.error("Get attendance error:", error);
-
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 const createAttendanceIssue = async (req, res) => {
   try {
     const { attendanceId, message } = req.body;
+    const parsedAttendanceId = Number(attendanceId);
 
-    if (!attendanceId || !message) {
+    if (
+      !Number.isInteger(parsedAttendanceId) ||
+      parsedAttendanceId <= 0 ||
+      typeof message !== "string" ||
+      !message.trim()
+    ) {
       return res.status(400).json({
-        message: "Attendance ID and message are required",
+        message: "A valid attendance ID and issue message are required",
       });
     }
 
     const student = await Student.findOne({
-      where: {
-        userId: req.user.id,
-      },
+      where: { userId: req.user.id },
     });
 
     if (!student) {
-      return res.status(404).json({
-        message: "Student profile not found",
-      });
+      return res.status(404).json({ message: "Student profile not found" });
     }
 
     const attendance = await Attendance.findOne({
       where: {
-        id: attendanceId,
+        id: parsedAttendanceId,
         studentId: student.id,
       },
     });
 
     if (!attendance) {
-      return res.status(404).json({
-        message: "Attendance record not found",
-      });
+      return res.status(404).json({ message: "Attendance record not found" });
     }
 
     const existingIssue = await AttendanceIssue.findOne({
@@ -271,7 +243,7 @@ const createAttendanceIssue = async (req, res) => {
     const issue = await AttendanceIssue.create({
       studentId: student.id,
       attendanceId: attendance.id,
-      message,
+      message: message.trim(),
     });
 
     return res.status(201).json({
@@ -280,10 +252,7 @@ const createAttendanceIssue = async (req, res) => {
     });
   } catch (error) {
     console.error("Create attendance issue error:", error);
-
-    return res.status(500).json({
-      message: "Server error",
-    });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 

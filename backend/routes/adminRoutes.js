@@ -11,6 +11,8 @@ const {
   verifyAttendance,
   getAttendanceIssues,
   resolveAttendanceIssue,
+  getPendingAccounts,
+  updateAccountApproval,
 } = require("../controllers/adminController");
 
 const {
@@ -20,6 +22,7 @@ const {
 
 const router = express.Router();
 
+// SUBJECTS
 router.post(
   "/subjects",
   authenticate,
@@ -34,6 +37,7 @@ router.get(
   getSubjects
 );
 
+// CLASSES
 router.post(
   "/classes",
   authenticate,
@@ -48,6 +52,7 @@ router.get(
   getClasses
 );
 
+// ATTENDANCE SUBMISSIONS
 router.get(
   "/submissions",
   authenticate,
@@ -55,9 +60,6 @@ router.get(
   getPendingSubmissions
 );
 
-/*
-  New whole-class attendance workflow
-*/
 router.get(
   "/classes/:classId/attendance-sheet",
   authenticate,
@@ -72,9 +74,6 @@ router.post(
   uploadClassAttendance
 );
 
-/*
-  Old single-submission endpoint kept for compatibility.
-*/
 router.post(
   "/submissions/:submissionId/verify",
   authenticate,
@@ -82,6 +81,7 @@ router.post(
   verifyAttendance
 );
 
+// ATTENDANCE ISSUES
 router.get(
   "/attendance/issues",
   authenticate,
@@ -94,6 +94,21 @@ router.patch(
   authenticate,
   authorize("ADMIN"),
   resolveAttendanceIssue
+);
+
+// ACCOUNT APPROVAL
+router.get(
+  "/accounts/pending",
+  authenticate,
+  authorize("ADMIN"),
+  getPendingAccounts
+);
+
+router.patch(
+  "/accounts/:userId/approval",
+  authenticate,
+  authorize("ADMIN"),
+  updateAccountApproval
 );
 
 module.exports = router;

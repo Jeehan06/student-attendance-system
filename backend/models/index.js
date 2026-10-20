@@ -1,11 +1,14 @@
 const User = require("./User");
 const Student = require("./Student");
+const Teacher = require("./Teacher");
 const Subject = require("./Subject");
 const ClassSession = require("./Class");
 const AttendanceSubmission = require("./AttendanceSubmission");
 const Attendance = require("./Attendance");
 const AttendanceIssue = require("./AttendanceIssue");
+const CRAppointment = require("./CRAppointment");
 
+// User <-> Student
 User.hasOne(Student, {
   foreignKey: "userId",
   as: "student",
@@ -17,6 +20,19 @@ Student.belongsTo(User, {
   as: "user",
 });
 
+// User <-> Teacher
+User.hasOne(Teacher, {
+  foreignKey: "userId",
+  as: "teacher",
+  onDelete: "CASCADE",
+});
+
+Teacher.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+});
+
+// Subject <-> ClassSession
 Subject.hasMany(ClassSession, {
   foreignKey: "subjectId",
   as: "classes",
@@ -28,6 +44,7 @@ ClassSession.belongsTo(Subject, {
   as: "subject",
 });
 
+// User <-> ClassSession
 User.hasMany(ClassSession, {
   foreignKey: "createdBy",
   as: "createdClasses",
@@ -38,6 +55,7 @@ ClassSession.belongsTo(User, {
   as: "creator",
 });
 
+// Student <-> AttendanceSubmission
 Student.hasMany(AttendanceSubmission, {
   foreignKey: "studentId",
   as: "submissions",
@@ -49,6 +67,7 @@ AttendanceSubmission.belongsTo(Student, {
   as: "student",
 });
 
+// ClassSession <-> AttendanceSubmission
 ClassSession.hasMany(AttendanceSubmission, {
   foreignKey: "classId",
   as: "submissions",
@@ -60,6 +79,7 @@ AttendanceSubmission.belongsTo(ClassSession, {
   as: "class",
 });
 
+// Student <-> Attendance
 Student.hasMany(Attendance, {
   foreignKey: "studentId",
   as: "attendance",
@@ -71,6 +91,7 @@ Attendance.belongsTo(Student, {
   as: "student",
 });
 
+// ClassSession <-> Attendance
 ClassSession.hasMany(Attendance, {
   foreignKey: "classId",
   as: "attendance",
@@ -82,6 +103,7 @@ Attendance.belongsTo(ClassSession, {
   as: "class",
 });
 
+// User <-> Attendance (verification)
 User.hasMany(Attendance, {
   foreignKey: "verifiedBy",
   as: "verifiedAttendances",
@@ -92,6 +114,7 @@ Attendance.belongsTo(User, {
   as: "verifier",
 });
 
+// Student <-> AttendanceIssue
 Student.hasMany(AttendanceIssue, {
   foreignKey: "studentId",
   as: "attendanceIssues",
@@ -103,6 +126,7 @@ AttendanceIssue.belongsTo(Student, {
   as: "student",
 });
 
+// Attendance <-> AttendanceIssue
 Attendance.hasMany(AttendanceIssue, {
   foreignKey: "attendanceId",
   as: "issues",
@@ -114,6 +138,7 @@ AttendanceIssue.belongsTo(Attendance, {
   as: "attendance",
 });
 
+// User <-> AttendanceIssue (resolution)
 User.hasMany(AttendanceIssue, {
   foreignKey: "resolvedBy",
   as: "resolvedIssues",
@@ -124,12 +149,36 @@ AttendanceIssue.belongsTo(User, {
   as: "resolver",
 });
 
+// Student <-> CRAppointment
+Student.hasMany(CRAppointment, {
+  foreignKey: "studentId",
+  as: "crAppointments",
+});
+
+CRAppointment.belongsTo(Student, {
+  foreignKey: "studentId",
+  as: "student",
+});
+
+// User <-> CRAppointment (appointing administrator)
+User.hasMany(CRAppointment, {
+  foreignKey: "appointedBy",
+  as: "crAppointmentsMade",
+});
+
+CRAppointment.belongsTo(User, {
+  foreignKey: "appointedBy",
+  as: "appointingAdmin",
+});
+
 module.exports = {
   User,
   Student,
+  Teacher,
   Subject,
   ClassSession,
   AttendanceSubmission,
   Attendance,
   AttendanceIssue,
+  CRAppointment,
 };

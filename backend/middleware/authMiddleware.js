@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const { User } = require("../models");
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -11,18 +12,42 @@ const authenticate = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET
-    );
+    const user = await User.findByPk(decoded.id, {
+      attributes: ["id", "role", "approvalStatus"],
+    });
 
-    req.user = decoded;
+    if (!user) {
+      return res.status(401).json({
+        message: "Account not found",
+      });
+    }
 
-    next();
+    if (user.approvalStatus !== "APPROVED") {
+      return res.status(403).json({
+        message: "Your account is not approved for access",
+        approvalStatus: user.approvalStatus,
+      });
+    }
+
+    req.user = {
+      id: user.id,
+      role: user.role,
+    };
+
+    return next();
   } catch (error) {
-    return res.status(401).json({
-      message: "Invalid or expired token",
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        message: "Invalid or expired token",
+      });
+    }
+
+    console.error("Authentication error:", error);
+
+    return res.status(500).json({
+      message: "Server error",
     });
   }
 };
@@ -35,7 +60,7 @@ const authorize = (...roles) => {
       });
     }
 
-    next();
+    return next();
   };
 };
 
