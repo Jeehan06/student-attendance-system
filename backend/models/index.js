@@ -7,6 +7,9 @@ const AttendanceSubmission = require("./AttendanceSubmission");
 const Attendance = require("./Attendance");
 const AttendanceIssue = require("./AttendanceIssue");
 const CRAppointment = require("./CRAppointment");
+const Department = require("./Department");
+const Semester = require("./Semester");
+
 
 // User <-> Student
 User.hasOne(Student, {
@@ -30,6 +33,54 @@ User.hasOne(Teacher, {
 Teacher.belongsTo(User, {
   foreignKey: "userId",
   as: "user",
+});
+
+// Department <-> Semester
+Department.hasMany(Semester, {
+  foreignKey: "departmentId",
+  as: "semesters",
+  onDelete: "RESTRICT",
+});
+
+Semester.belongsTo(Department, {
+  foreignKey: "departmentId",
+  as: "department",
+});
+
+// Department <-> Teacher
+Department.hasMany(Teacher, {
+  foreignKey: "departmentId",
+  as: "teachers",
+  onDelete: "RESTRICT",
+});
+
+Teacher.belongsTo(Department, {
+  foreignKey: "departmentId",
+  as: "departmentRecord",
+});
+
+// Semester <-> Subject
+Semester.hasMany(Subject, {
+  foreignKey: "semesterId",
+  as: "subjects",
+  onDelete: "RESTRICT",
+});
+
+Subject.belongsTo(Semester, {
+  foreignKey: "semesterId",
+  as: "semesterRecord",
+});
+
+// Teacher <-> Subject
+Teacher.hasMany(Subject, {
+  foreignKey: "teacherId",
+  as: "subjects",
+  onDelete: "RESTRICT",
+});
+
+Subject.belongsTo(Teacher, {
+  foreignKey: "teacherId",
+  as: "responsibleTeacher",
 });
 
 // Subject <-> ClassSession
@@ -172,6 +223,8 @@ CRAppointment.belongsTo(User, {
 });
 
 module.exports = {
+  Department,
+  Semester,
   User,
   Student,
   Teacher,
