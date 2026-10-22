@@ -11,6 +11,14 @@ const CRAppointment = sequelize.define("CRAppointment", {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  semesterId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: "Semesters",
+      key: "id",
+    },
+  },
   department: {
     type: DataTypes.STRING(100),
     allowNull: false,

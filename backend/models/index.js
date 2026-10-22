@@ -1,3 +1,4 @@
+
 const User = require("./User");
 const Student = require("./Student");
 const Teacher = require("./Teacher");
@@ -9,7 +10,6 @@ const AttendanceIssue = require("./AttendanceIssue");
 const CRAppointment = require("./CRAppointment");
 const Department = require("./Department");
 const Semester = require("./Semester");
-
 
 // User <-> Student
 User.hasOne(Student, {
@@ -55,6 +55,17 @@ Department.hasMany(Teacher, {
 });
 
 Teacher.belongsTo(Department, {
+  foreignKey: "departmentId",
+  as: "departmentRecord",
+});
+
+// Department <-> Subject
+Department.hasMany(Subject, {
+  foreignKey: "departmentId",
+  as: "subjects",
+});
+
+Subject.belongsTo(Department, {
   foreignKey: "departmentId",
   as: "departmentRecord",
 });
@@ -220,6 +231,17 @@ User.hasMany(CRAppointment, {
 CRAppointment.belongsTo(User, {
   foreignKey: "appointedBy",
   as: "appointingAdmin",
+});
+
+// Semester <-> CRAppointment
+Semester.hasMany(CRAppointment, {
+  foreignKey: "semesterId",
+  as: "crAppointments",
+});
+
+CRAppointment.belongsTo(Semester, {
+  foreignKey: "semesterId",
+  as: "semesterRecord",
 });
 
 module.exports = {

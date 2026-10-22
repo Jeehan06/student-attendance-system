@@ -1,3 +1,4 @@
+
 const {
   Student,
   ClassSession,
@@ -14,16 +15,16 @@ const getClasses = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ message: "Student profile not found" });
+      return res.status(404).json({
+        message: "Student profile not found",
+      });
     }
 
-    const subjectFilter = {
-      course: student.course,
-      semester: student.semester,
-    };
-
-    if (student.department) {
-      subjectFilter.department = student.department;
+    if (!student.departmentId || !student.semesterId) {
+      return res.status(409).json({
+        message:
+          "Your academic department and semester have not been configured. Please contact the administrator.",
+      });
     }
 
     const classes = await ClassSession.findAll({
@@ -31,7 +32,10 @@ const getClasses = async (req, res) => {
         {
           model: Subject,
           as: "subject",
-          where: subjectFilter,
+          where: {
+            departmentId: student.departmentId,
+            semesterId: student.semesterId,
+          },
         },
         {
           model: AttendanceSubmission,
@@ -49,7 +53,10 @@ const getClasses = async (req, res) => {
     return res.status(200).json({ classes });
   } catch (error) {
     console.error("Get student classes error:", error);
-    return res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -64,7 +71,8 @@ const submitAttendance = async (req, res) => {
       !["PRESENT", "ABSENT"].includes(status)
     ) {
       return res.status(400).json({
-        message: "A valid class ID and status (PRESENT or ABSENT) are required",
+        message:
+          "A valid class ID and status (PRESENT or ABSENT) are required",
       });
     }
 
@@ -73,7 +81,16 @@ const submitAttendance = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ message: "Student profile not found" });
+      return res.status(404).json({
+        message: "Student profile not found",
+      });
+    }
+
+    if (!student.departmentId || !student.semesterId) {
+      return res.status(409).json({
+        message:
+          "Your academic department and semester have not been configured. Please contact the administrator.",
+      });
     }
 
     const classSession = await ClassSession.findByPk(parsedClassId, {
@@ -81,17 +98,16 @@ const submitAttendance = async (req, res) => {
     });
 
     if (!classSession || !classSession.subject) {
-      return res.status(404).json({ message: "Class session not found" });
+      return res.status(404).json({
+        message: "Class session not found",
+      });
     }
 
     const subject = classSession.subject;
 
     if (
-      subject.course !== student.course ||
-      Number(subject.semester) !== Number(student.semester) ||
-      (student.department &&
-        subject.department !== undefined &&
-        subject.department !== student.department)
+      Number(subject.departmentId) !== Number(student.departmentId) ||
+      Number(subject.semesterId) !== Number(student.semesterId)
     ) {
       return res.status(403).json({
         message: "This class is not assigned to you",
@@ -130,7 +146,10 @@ const submitAttendance = async (req, res) => {
     }
 
     console.error("Submit attendance error:", error);
-    return res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -141,7 +160,9 @@ const getAttendance = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ message: "Student profile not found" });
+      return res.status(404).json({
+        message: "Student profile not found",
+      });
     }
 
     const attendance = await Attendance.findAll({
@@ -163,9 +184,11 @@ const getAttendance = async (req, res) => {
     });
 
     const totalClasses = attendance.length;
+
     const presentClasses = attendance.filter(
       (record) => record.status === "PRESENT"
     ).length;
+
     const absentClasses = attendance.filter(
       (record) => record.status === "ABSENT"
     ).length;
@@ -186,7 +209,10 @@ const getAttendance = async (req, res) => {
     });
   } catch (error) {
     console.error("Get attendance error:", error);
-    return res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -211,7 +237,9 @@ const createAttendanceIssue = async (req, res) => {
     });
 
     if (!student) {
-      return res.status(404).json({ message: "Student profile not found" });
+      return res.status(404).json({
+        message: "Student profile not found",
+      });
     }
 
     const attendance = await Attendance.findOne({
@@ -222,7 +250,9 @@ const createAttendanceIssue = async (req, res) => {
     });
 
     if (!attendance) {
-      return res.status(404).json({ message: "Attendance record not found" });
+      return res.status(404).json({
+        message: "Attendance record not found",
+      });
     }
 
     const existingIssue = await AttendanceIssue.findOne({
@@ -252,7 +282,10 @@ const createAttendanceIssue = async (req, res) => {
     });
   } catch (error) {
     console.error("Create attendance issue error:", error);
-    return res.status(500).json({ message: "Server error" });
+
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 

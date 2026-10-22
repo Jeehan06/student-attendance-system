@@ -1,7 +1,14 @@
+
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sequelize = require("../config/database");
-const { User, Student, Teacher } = require("../models");
+const {
+  User,
+  Student,
+  Teacher,
+  Department,
+  Semester,
+} = require("../models");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -80,6 +87,30 @@ const registerStudent = async (req, res) => {
         return { duplicate: true };
       }
 
+      const departmentRecord = await Department.findOne({
+        where: sequelize.where(
+          sequelize.fn("LOWER", sequelize.col("name")),
+          department.trim().toLowerCase()
+        ),
+        transaction,
+      });
+
+      if (!departmentRecord) {
+        return { departmentNotFound: true };
+      }
+
+      const semesterRecord = await Semester.findOne({
+        where: {
+          departmentId: departmentRecord.id,
+          semesterNumber: Number(semester),
+        },
+        transaction,
+      });
+
+      if (!semesterRecord) {
+        return { semesterNotFound: true };
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create(
@@ -96,6 +127,8 @@ const registerStudent = async (req, res) => {
       const student = await Student.create(
         {
           userId: user.id,
+          departmentId: departmentRecord.id,
+          semesterId: semesterRecord.id,
           course: course.trim(),
           department: department.trim(),
           semester: Number(semester),
@@ -109,6 +142,20 @@ const registerStudent = async (req, res) => {
     if (result.duplicate) {
       return res.status(409).json({
         message: "Email already registered",
+      });
+    }
+
+    if (result.departmentNotFound) {
+      return res.status(400).json({
+        message:
+          "Department not found. Please choose an existing department.",
+      });
+    }
+
+    if (result.semesterNotFound) {
+      return res.status(400).json({
+        message:
+          "That semester does not exist for the selected department.",
       });
     }
 
@@ -186,6 +233,18 @@ const registerTeacher = async (req, res) => {
         return { duplicate: true };
       }
 
+      const departmentRecord = await Department.findOne({
+        where: sequelize.where(
+          sequelize.fn("LOWER", sequelize.col("name")),
+          department.trim().toLowerCase()
+        ),
+        transaction,
+      });
+
+      if (!departmentRecord) {
+        return { departmentNotFound: true };
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create(
@@ -202,6 +261,7 @@ const registerTeacher = async (req, res) => {
       const teacher = await Teacher.create(
         {
           userId: user.id,
+          departmentId: departmentRecord.id,
           department: department.trim(),
         },
         { transaction }
@@ -213,6 +273,13 @@ const registerTeacher = async (req, res) => {
     if (result.duplicate) {
       return res.status(409).json({
         message: "Email already registered",
+      });
+    }
+
+    if (result.departmentNotFound) {
+      return res.status(400).json({
+        message:
+          "Department not found. Please choose an existing department.",
       });
     }
 

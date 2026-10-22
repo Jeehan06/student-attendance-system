@@ -8,21 +8,64 @@ const {
   Teacher,
   User,
   CRAppointment,
+  Department,
+  Semester,
 } = require("../models");
 
 const sequelize = require("../config/database");
 
 const createSubject = async (req, res) => {
   try {
-    const { name, course, semester } = req.body;
+    const { name, departmentId, semesterId } = req.body;
 
-    if (!name || !course || !semester) {
+    const parsedDepartmentId = Number(departmentId);
+    const parsedSemesterId = Number(semesterId);
+
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      !Number.isInteger(parsedDepartmentId) ||
+      parsedDepartmentId <= 0 ||
+      !Number.isInteger(parsedSemesterId) ||
+      parsedSemesterId <= 0
+    ) {
       return res.status(400).json({
-        message: "Name, course and semester are required",
+        message: "Name, department and semester are required",
       });
     }
 
-    const subject = await Subject.create({ name, course, semester });
+    const department = await Department.findByPk(parsedDepartmentId);
+
+    if (!department) {
+      return res.status(404).json({
+        message: "Department not found",
+      });
+    }
+
+    const semester = await Semester.findOne({
+      where: {
+        id: parsedSemesterId,
+        departmentId: department.id,
+      },
+    });
+
+    if (!semester) {
+      return res.status(400).json({
+        message: "The selected semester does not belong to this department",
+      });
+    }
+
+    const subject = await Subject.create({
+      name: name.trim(),
+      departmentId: department.id,
+      semesterId: semester.id,
+      teacherId: null,
+
+      // Keep legacy fields compatible while the remaining code is migrated.
+      course: department.name,
+      department: department.name,
+      semester: semester.semesterNumber,
+    });
 
     return res.status(201).json({
       message: "Subject created successfully",

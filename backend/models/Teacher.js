@@ -12,6 +12,15 @@ const Teacher = sequelize.define("Teacher", {
     allowNull: false,
     unique: true,
   },
+
+  // Normalized link to the teacher's department.
+  // Nullable until the staged migration is completed.
+  departmentId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  // Legacy field retained temporarily for existing application code.
   department: {
     type: DataTypes.STRING(100),
     allowNull: false,

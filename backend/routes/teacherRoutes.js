@@ -1,8 +1,12 @@
 const express = require("express");
+
 const {
   getClasses,
   getClassSubmissions,
+  getAvailableSubjects,
+  claimSubject,
 } = require("../controllers/teacherController");
+
 const {
   authenticate,
   authorize,
@@ -22,6 +26,20 @@ router.get(
   authenticate,
   authorize("TEACHER"),
   getClassSubmissions
+);
+
+router.get(
+  "/subjects/available",
+  authenticate,
+  authorize("TEACHER"),
+  getAvailableSubjects
+);
+
+router.post(
+  "/subjects/:subjectId/claim",
+  authenticate,
+  authorize("TEACHER"),
+  claimSubject
 );
 
 module.exports = router;

@@ -12,6 +12,18 @@ const Student = sequelize.define("Student", {
     allowNull: false,
     unique: true,
   },
+
+  // Normalized links; nullable during the staged transition.
+  departmentId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  semesterId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  // Legacy fields retained for compatibility with existing code.
   course: {
     type: DataTypes.STRING,
     allowNull: false,
