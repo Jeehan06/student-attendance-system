@@ -11,6 +11,8 @@ const Subject = sequelize.define("Subject", {
     type: DataTypes.STRING,
     allowNull: false,
   },
+
+  // Legacy fields retained during the transition.
   course: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -22,6 +24,22 @@ const Subject = sequelize.define("Subject", {
   semester: {
     type: DataTypes.INTEGER,
     allowNull: false,
+  },
+
+  // Normalized academic relationships.
+  departmentId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+  semesterId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  // Assigned by an administrator; nullable until assignment is implemented.
+  teacherId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   },
 });
 

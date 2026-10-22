@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const sequelize = require("../config/database");
-const { User, Student, Teacher } = require("../models");
+const { User, Student, Teacher, Department } = require("../models");
 
 const generateToken = (user) => {
   return jwt.sign(
@@ -112,6 +112,12 @@ const registerStudent = async (req, res) => {
       });
     }
 
+    if (result.departmentNotFound) {
+      return res.status(400).json({
+        message: "Department not found. Please enter an existing department name.",
+      });
+    }
+
     return res.status(201).json({
       message:
         "Registration submitted successfully. Your account is awaiting administrator approval.",
@@ -186,6 +192,18 @@ const registerTeacher = async (req, res) => {
         return { duplicate: true };
       }
 
+      const departmentRecord = await Department.findOne({
+        where: sequelize.where(
+          sequelize.fn("LOWER", sequelize.fn("BTRIM", sequelize.col("name"))),
+          department.trim().toLowerCase()
+        ),
+        transaction,
+      });
+
+      if (!departmentRecord) {
+        return { departmentNotFound: true };
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = await User.create(
@@ -202,7 +220,8 @@ const registerTeacher = async (req, res) => {
       const teacher = await Teacher.create(
         {
           userId: user.id,
-          department: department.trim(),
+          department: departmentRecord.name,
+          departmentId: departmentRecord.id,
         },
         { transaction }
       );

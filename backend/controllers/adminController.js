@@ -8,21 +8,65 @@ const {
   Teacher,
   User,
   CRAppointment,
+  Department,
+  Semester,
 } = require("../models");
 
 const sequelize = require("../config/database");
 
 const createSubject = async (req, res) => {
   try {
-    const { name, course, semester } = req.body;
+    const { name, departmentId, semesterId, teacherId } = req.body;
+    const dId = Number(departmentId);
+    const sId = Number(semesterId);
+    const tId = Number(teacherId);
 
-    if (!name || !course || !semester) {
+    if (
+      typeof name !== "string" || !name.trim() ||
+      !Number.isInteger(dId) || dId < 1 ||
+      !Number.isInteger(sId) || sId < 1 ||
+      !Number.isInteger(tId) || tId < 1
+    ) {
       return res.status(400).json({
-        message: "Name, course and semester are required",
+        message: "Name, departmentId, semesterId and teacherId are required",
       });
     }
 
-    const subject = await Subject.create({ name, course, semester });
+    const department = await Department.findByPk(dId);
+    if (!department) {
+      return res.status(404).json({ message: "Department not found" });
+    }
+
+    const semesterRecord = await Semester.findOne({
+      where: { id: sId, departmentId: department.id },
+    });
+    if (!semesterRecord) {
+      return res.status(400).json({
+        message: "The selected semester does not belong to this department",
+      });
+    }
+
+    const teacher = await Teacher.findByPk(tId);
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher not found" });
+    }
+
+    if (Number(teacher.departmentId) !== department.id) {
+      return res.status(400).json({
+        message: "The responsible teacher must belong to the selected department",
+      });
+    }
+
+    const subject = await Subject.create({
+      name: name.trim(),
+      departmentId: department.id,
+      semesterId: semesterRecord.id,
+      teacherId: teacher.id,
+      // Keep legacy fields populated during the application transition.
+      course: department.name,
+      department: department.name,
+      semester: semesterRecord.semesterNumber,
+    });
 
     return res.status(201).json({
       message: "Subject created successfully",

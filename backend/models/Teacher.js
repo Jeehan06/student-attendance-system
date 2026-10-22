@@ -12,9 +12,17 @@ const Teacher = sequelize.define("Teacher", {
     allowNull: false,
     unique: true,
   },
+
+  // Legacy field retained during the transition.
   department: {
     type: DataTypes.STRING(100),
     allowNull: false,
+  },
+
+  // Normalized department relationship.
+  departmentId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
   },
 });
 
